@@ -1,0 +1,14 @@
+/vendor
+.env
+.env.*
+/storage/*.key
+.phpunit.result.cache
+/.phpunit.cache
+/.idea
+/.vscode
+/.cursor
+_ide_helper.php
+*.log
+supervisord.pid
+.DS_Store
+Thumbs.db
