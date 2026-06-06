@@ -31,3 +31,15 @@ Cada worker possui um limite rígido de consumo de memória de **128MB** (`--mem
 ## 💻 Como Rodar o Projeto
 
 Graças à infraestrutura baseada em Docker, **não é necessário ter o PHP ou o Composer instalados na sua máquina física**. O build cuidará de todas as dependências automaticamente.
+
+## 🧪 Como Executar os Testes de Estresse
+
+O projeto conta com um comando customizado do Artisan para injetar grandes volumes de mensagens na fila `default` e testar a vazão e concorrência dos workers.
+
+## Cenário: Disparar 5.000 Mensagens de uma vez
+
+Com o ambiente de pé, execute o comando de disparo no terminal da sua máquina física:
+
+```bash
+docker compose exec app php artisan test:rabbitmq 5000
+```
