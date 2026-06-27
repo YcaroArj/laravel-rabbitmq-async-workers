@@ -28,7 +28,7 @@ Cada worker possui um limite rígido de consumo de memória de **128MB** (`--mem
 
 ---
 
-![alt text](image-1.png)
+![alt text](image.png)
 
 ## 💻 Como Rodar o Projeto
 
