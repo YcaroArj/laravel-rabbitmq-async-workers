@@ -9,7 +9,9 @@ RUN apk add --no-cache \
     supervisor
 
 RUN docker-php-ext-install pdo_pgsql sockets bcmath \
-    && docker-php-ext-enable sockets
+    && docker-php-ext-enable sockets \
+    && pecl install redis \
+    && docker-php-ext-enable redis
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 

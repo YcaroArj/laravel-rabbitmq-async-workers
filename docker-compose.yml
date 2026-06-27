@@ -6,15 +6,57 @@ services:
     container_name: rabbitmq-broker
     restart: unless-stopped
     ports:
-      - "5672:5672"   
-      - "15672:15672"
+      - "${RABBITMQ_PORT}:${RABBITMQ_PORT}"   
+      - "${RABBITMQ_PORT_MANAGER}:${RABBITMQ_PORT_MANAGER}"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     environment:
-      - RABBITMQ_DEFAULT_USER=guest
-      - RABBITMQ_DEFAULT_PASS=guest
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
     networks:
       - laravel-rabbitmq-async-workers
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  redis:
+    image: redis:alpine
+    container_name: laravel-rabbitmq-async-workers-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    volumes:
+      - redis_data:/data
+    networks:
+      - laravel-rabbitmq-async-workers
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  db:
+    image: postgres:15-alpine
+    container_name: laravel-rabbitmq-async-workers-db
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - laravel-rabbitmq-async-workers
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   app:
     build:
@@ -24,12 +66,17 @@ services:
     restart: unless-stopped
     working_dir: /var/www
     ports:
-      - "8000:8000"
+      - "${APP_PORT}:${APP_PORT}"
     volumes:
       - .:/var/www
-    command: php artisan serve --host=0.0.0.0 --port=8000
+    command: sh -c "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${APP_PORT}"
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
     networks:
       - laravel-rabbitmq-async-workers
 
@@ -42,10 +89,16 @@ services:
     working_dir: /var/www
     volumes:
       - .:/var/www
-    command: sh -c "php artisan rabbitmq:queue-declare default && supervisord -n -c /etc/supervisor/supervisord.conf"
+    command: sh -c "php artisan rabbitmq:queue-declare payment.pix && php artisan rabbitmq:queue-declare payment.boleto && php artisan rabbitmq:queue-declare payment.credit_card && supervisord -n -c /etc/supervisor/supervisord.conf"
     depends_on:
-      - rabbitmq
-      - app
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
     networks:
       - laravel-rabbitmq-async-workers
 
@@ -55,3 +108,5 @@ networks:
 
 volumes:
   rabbitmq_data:
+  redis_data:
+  postgres_data:

@@ -28,6 +28,8 @@ Cada worker possui um limite rígido de consumo de memória de **128MB** (`--mem
 
 ---
 
+![alt text](image-1.png)
+
 ## 💻 Como Rodar o Projeto
 
 Graças à infraestrutura baseada em Docker, **não é necessário ter o PHP ou o Composer instalados na sua máquina física**. O build cuidará de todas as dependências automaticamente.

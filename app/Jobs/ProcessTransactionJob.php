@@ -2,8 +2,12 @@
 
 namespace App\Jobs;
 
+use App\Services\BoletoPaymentService;
+use App\Services\CreditCardPaymentService;
+use App\Services\PixPaymentService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Exception;
 
 class ProcessTransactionJob implements ShouldQueue
 {
@@ -11,15 +15,22 @@ class ProcessTransactionJob implements ShouldQueue
 
     private array $transactionData;
 
-    public function __construct(array $transactionData)
-    {
-        $this->transactionData = $transactionData;
+    public function __construct(
+        public string $paymentId,
+        public string $type
+    ) {
+        $this->onQueue("payment.{$this->type}");
     }
 
     public function handle(): void
     {
-        $payload = json_encode($this->transactionData);
-        logger()->info("Processing transaction via worker: {$payload}");
+        $processor = match ($this->type) {
+            'pix' => app(PixPaymentService::class),
+            'boleto' => app(BoletoPaymentService::class),
+            'credit_card' => app(CreditCardPaymentService::class),
+            default => throw new Exception('Invalid payment type'),
+        };
+        $processor->process($this->paymentId);
     }
 
     public function jsonSerialize(): array
